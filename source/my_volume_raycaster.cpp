@@ -29,6 +29,8 @@
 #include <utils.hpp>
 #include <turntable.hpp>
 
+const int choose_transfer_function = 0; // 0 (normal, schwarz, weiﬂ), 1 (sch‰del in blau rot)
+
 const std::string g_file_vertex_shader("../../source/shader/volume.vert");
 const std::string g_file_fragment_shader("../../source/shader/volume.frag");
 
@@ -134,15 +136,23 @@ int main(int argc, char* argv[])
   //  - unsigned char or float - data value     (0.0 .. 1.0) or (0..255)
   //  - vec4f         - color and alpha value   (0.0 .. 1.0) per channel
 
-  // // // // // // // // // // // // // // // // // // // // // // // // 
+	// // // // // // // // // // // // // // // // // // // // // // // // 
   
-  // Aufgabe 2
+	// Aufgabe 2
 
-  // Sch‰del in Blau / Rot
-  transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
-  transfer_fun.add(0.1f, glm::vec4(0.0, 0.0, 0.0, 0.0));
-  transfer_fun.add(0.4f, glm::vec4(0.0, 0.0, 1.0, 0.0));
-  transfer_fun.add(1.0f, glm::vec4(1.0, 0.0, 0.0, 1.0));
+	if (choose_transfer_function == 1) {
+
+		// Sch‰del in Blau / Rot
+		transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
+		transfer_fun.add(0.1f, glm::vec4(0.0, 0.0, 0.0, 0.0));
+		transfer_fun.add(0.4f, glm::vec4(0.0, 0.0, 1.0, 0.0));
+		transfer_fun.add(1.0f, glm::vec4(1.0, 0.0, 0.0, 1.0));
+	} else if (choose_transfer_function == 0) {
+
+		// Normal
+		transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
+		transfer_fun.add(1.0f, glm::vec4(1.0, 1.0, 1.0, 1.0));
+	}
    
 
   ///NOTHING TODO UNTIL HERE-------------------------------------------------------------------------------

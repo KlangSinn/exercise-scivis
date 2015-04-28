@@ -107,7 +107,7 @@ vec4 transfer(float sample) {
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
 
-#define AUFGABE 31  // 31 32 331 332 4 5
+#define AUFGABE 331  // 31 32 331 332 4 5
 void main() {
 
     /// One step trough the volume
@@ -134,44 +134,38 @@ void main() {
 	dst = transfer(max_val);
 #endif 
 
-	// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
     
 #if AUFGABE == 32	
 
 	// AVERAGE
 	int count = 0;
-	float alpha = 0.0;
-    while (inside_volume) {      
-        float s = get_sample_data(sampling_pos);
-		if (s > 0.05) {
-			alpha += s;
+	while(inside_volume_bounds(sampling_pos)) {
+		float s = get_triliniear_sample(sampling_pos);
+		if (s > 0.1) {
+			dst += transfer(s);
 			count++;
 		}
-        sampling_pos  += ray_increment;
-        inside_volume  = inside_volume_bounds(sampling_pos);
+        sampling_pos += ray_increment;
     }
-	dst = vec4(1.0,1.0,1.0,alpha/count);
+	dst /= count;
 #endif
 
-	// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
     
 #if AUFGABE == 331
 	
-	// ACCUMULATE / DVR / COMPOSITING
-	// FRONT - TO - BACK
-	vec4 result = vec4(0,0,0,0.0);
-    while (inside_volume) {
-        float s = get_sample_data(sampling_pos);
-		if (s > 0.0) {
-			vec4 color = transfer(s);
-			color.a = 1.0 - pow(1.0 - color.a, sampling_distance * 100.0);
-			result.rgb = result.rgb + (1.0 - result.a) * color.a * color.rgb;
-			result.a = result.a + (1.0 - result.a) * color.a;
+	// COMPOSITING | FRONT - TO - BACK
+	float trans = 1.0;
+	while (inside_volume_bounds(sampling_pos) && trans > 0.0) {
+		float s = get_triliniear_sample(sampling_pos);
+		if (s > 0.1) {
+			vec4 tmp_col = transfer(s);
+			trans = trans * (1 - tmp_col.a);
+			dst += tmp_col * trans;			
 		}
-        sampling_pos += ray_increment;
-        inside_volume = inside_volume_bounds(sampling_pos);
-    }
-	dst = result;	
+		sampling_pos += ray_increment;
+	}
 #endif 
 
 #if AUFGABE == 332
