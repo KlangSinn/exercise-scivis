@@ -19,7 +19,6 @@ uniform ivec3   volume_dimensions;
 uniform vec3    light_position;
 uniform vec3    light_color;
 
-
 bool
 inside_volume_bounds(const in vec3 sampling_position)
 {
@@ -42,8 +41,7 @@ get_nearest_neighbour_sample(vec3 in_sampling_pos){
     vec3 interpol_sampling_pos_f;
     interpol_sampling_pos_f.x = round(sampling_pos_array_space_f.x);
     interpol_sampling_pos_f.y = round(sampling_pos_array_space_f.y);
-    interpol_sampling_pos_f.z = round(sampling_pos_array_space_f.z);
-        
+    interpol_sampling_pos_f.z = round(sampling_pos_array_space_f.z);	
 
     /// transform from array space to texture space
     vec3 sampling_pos_texture_space_f = interpol_sampling_pos_f/vec3(volume_dimensions);
@@ -52,19 +50,66 @@ get_nearest_neighbour_sample(vec3 in_sampling_pos){
     return texture(volume_texture, sampling_pos_texture_space_f * obj_to_tex).r;
 }
 
-float
-get_sample_data(vec3 in_sampling_pos){
-#if 1
-    return get_nearest_neighbour_sample(in_sampling_pos);
-#else
-    return get_triliniear_sample(in_sampling_pos);
-#endif
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
 
+// Aufgabe 1
+float distance(vec3 pos1, vec3 pos2) {
+	return sqrt(pow(pos1.x - pos2.x, 2.0) + pow(pos1.y - pos2.y, 2.0) + pow(pos1.z - pos2.z, 2.0));
+}
+float get_liniear_interpolation(vec3 a, vec3 b, vec3 ab, float A, float B) {
+	float x = distance(a, ab) / distance(a, b);
+	if(A == -1.0f)
+		A = texture(volume_texture, a/vec3(volume_dimensions) * (vec3(1.0) / max_bounds)).r;
+	if(B == -1.0f)
+		B = texture(volume_texture, b/vec3(volume_dimensions) * (vec3(1.0) / max_bounds)).r;
+	return (1 - x) * A + x * B;
+}
+float get_triliniear_sample(vec3 in_sampling_pos) {
+    
+    vec3 sampling_pos_array_space_f = in_sampling_pos * vec3(volume_dimensions);
+
+	// POINTS
+	float orig_x = sampling_pos_array_space_f.x;
+	float orig_y = sampling_pos_array_space_f.y;
+	float orig_z = sampling_pos_array_space_f.z;
+
+	vec3 ab = vec3(orig_x, ceil(orig_y), floor(orig_z));
+	vec3 cd = vec3(orig_x, ceil(orig_y), ceil(orig_z));
+	vec3 ef = vec3(orig_x, floor(orig_y), floor(orig_z));
+	vec3 gh = vec3(orig_x, floor(orig_y), ceil(orig_z));
+
+	vec3 efgh = vec3(orig_x, floor(orig_y), orig_z);
+	vec3 abcd = vec3(orig_x, ceil(orig_y), orig_z);
+
+	// INTERPOLATE POINTS
+	float ab_opa = get_liniear_interpolation(vec3(floor(orig_x), ceil(orig_y), floor(orig_z)), vec3(ceil(orig_x), ceil(orig_y), floor(orig_z)), ab, -1.0f, -1.0f);
+	float cd_opa = get_liniear_interpolation(vec3(floor(orig_x), ceil(orig_y), ceil(orig_z)), vec3(ceil(orig_x), ceil(orig_y), ceil(orig_z)), cd, -1.0f, -1.0f);
+	float ef_opa = get_liniear_interpolation(vec3(floor(orig_x), floor(orig_y), floor(orig_z)), vec3(ceil(orig_x), floor(orig_y), floor(orig_z)), ef, -1.0f, -1.0f);
+	float gh_opa = get_liniear_interpolation(vec3(floor(orig_x), floor(orig_y), ceil(orig_z)), vec3(ceil(orig_x), floor(orig_y), ceil(orig_z)), gh, -1.0f, -1.0f);
+
+	float x1 = distance(ab, abcd) / distance(ab, cd);
+	float abcd_opa = (1 - x1) * ab_opa + x1 * cd_opa;
+	float x2 = distance(ef, efgh) / distance(ef, gh);
+	float efgh_opa = (1 - x2) * ef_opa + x2 * gh_opa;
+
+	float x3 = distance(abcd, sampling_pos_array_space_f) / distance(abcd, efgh);
+	float final_sample = (1 - x3) * abcd_opa + x3 * efgh_opa;
+
+	return final_sample;
 }
 
-#define AUFGABE 31  // 31 32 33 4 5
-void main()
-{
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+
+// Aufgabe 2
+vec4 transfer(float sample) {
+	return texture(transfer_texture, vec2(sample, sample));
+}
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+
+#define AUFGABE 31  // 31 32 331 332 4 5
+void main() {
+
     /// One step trough the volume
     vec3 ray_increment      = normalize(ray_entry_position - camera_location) * sampling_distance;
     /// Position in Volume
@@ -76,81 +121,90 @@ void main()
     /// check if we are inside volume
     bool inside_volume = inside_volume_bounds(sampling_pos);
 
-#if AUFGABE == 31
-    vec4 max_val = vec4(0.0, 0.0, 0.0, 0.0);
-  
-    // the traversal loop,
-    // termination when the sampling position is outside volume boundarys
-    // another termination condition for early ray termination is added
-    while (inside_volume && max_val.a < 0.95) 
-    {      
-        // get sample
-        float s = get_sample_data(sampling_pos);
-                
-        // apply the transfer functions to retrieve color and opacity
-        vec4 color = texture(transfer_texture, vec2(s, s));
-          
-        // this is the example for maximum intensity projection
-        max_val.r = max(color.r, max_val.r);
-        max_val.g = max(color.g, max_val.g);
-        max_val.b = max(color.b, max_val.b);
-        max_val.a = max(color.a, max_val.a);
-        
-        // increment the ray sampling position
+// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+
+#if AUFGABE == 31	
+
+	// MAX INTENSITY
+	float max_val = 0.0;
+	while (inside_volume_bounds(sampling_pos)) {
+		max_val = max(get_triliniear_sample(sampling_pos), max_val);
         sampling_pos  += ray_increment;
-
-        // update the loop termination condition
-        inside_volume  = inside_volume_bounds(sampling_pos);
     }
-
-    dst = max_val;
+	dst = transfer(max_val);
 #endif 
+
+	// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
     
-#if AUFGABE == 32
-    
-    // the traversal loop,
-    // termination when the sampling position is outside volume boundarys
-    // another termination condition for early ray termination is added
-    while (inside_volume && dst.a < 0.95)
-    {      
-        // get sample
+#if AUFGABE == 32	
+
+	// AVERAGE
+	int count = 0;
+	float alpha = 0.0;
+    while (inside_volume) {      
         float s = get_sample_data(sampling_pos);
-
-        // garbage code
-        dst = vec4(1.0, 0.0, 0.0, 1.0);
-        
-        // increment the ray sampling position
+		if (s > 0.05) {
+			alpha += s;
+			count++;
+		}
         sampling_pos  += ray_increment;
-
-        // update the loop termination condition
         inside_volume  = inside_volume_bounds(sampling_pos);
     }
+	dst = vec4(1.0,1.0,1.0,alpha/count);
 #endif
+
+	// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
     
-#if AUFGABE == 33
-    // the traversal loop,
-    // termination when the sampling position is outside volume boundarys
-    // another termination condition for early ray termination is added
-    while (inside_volume && dst.a < 0.95)
-    {
-        // get sample
+#if AUFGABE == 331
+	
+	// ACCUMULATE / DVR / COMPOSITING
+	// FRONT - TO - BACK
+	vec4 result = vec4(0,0,0,0.0);
+    while (inside_volume) {
         float s = get_sample_data(sampling_pos);
-
-        // garbage code
-        dst = vec4(0.0, 1.0, 0.0, 1.0);
-
-        // increment the ray sampling position
+		if (s > 0.0) {
+			vec4 color = transfer(s);
+			color.a = 1.0 - pow(1.0 - color.a, sampling_distance * 100.0);
+			result.rgb = result.rgb + (1.0 - result.a) * color.a * color.rgb;
+			result.a = result.a + (1.0 - result.a) * color.a;
+		}
         sampling_pos += ray_increment;
-
-        // update the loop termination condition
         inside_volume = inside_volume_bounds(sampling_pos);
     }
+	dst = result;	
 #endif 
 
+#if AUFGABE == 332
+
+	// ACCUMULATE / DVR / COMPOSITING
+	// BACK - TO - FRONT
+	sampling_pos = max_bounds;
+	vec4 result = vec4(1, 1, 1, 1.0);
+	while (inside_volume) {
+		float s = get_sample_data(sampling_pos);
+		//vec4 color = transfer(s);
+		//color.rgb = color.rgb * color.a; // where: color.a == s
+		//result += color;
+		//result.rgb = (1 - color.a) * result.rgb + color.rgb;
+		if (s < 1 && s > 0)
+			result.a = result.a * (1 - s) + s;
+		else
+			result = vec4(1, 0, 0, 1);
+
+		sampling_pos -= ray_increment;
+		inside_volume = inside_volume_bounds(sampling_pos);
+	}
+	dst = result;
+
+#endif 
+
+	// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
+
 #if AUFGABE == 4
-    // the traversal loop,
-    // termination when the sampling position is outside volume boundarys
-    // another termination condition for early ray termination is added
+    
+	// GRADIENT
+	// anstieg im punkt, also (fi+1 - fi-1) / 2h
+	// damit dvr
     while (inside_volume && dst.a < 0.95)
     {
         // get sample

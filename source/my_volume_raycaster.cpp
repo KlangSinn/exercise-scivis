@@ -29,8 +29,8 @@
 #include <utils.hpp>
 #include <turntable.hpp>
 
-const std::string g_file_vertex_shader("../../../source/shader/volume.vert");
-const std::string g_file_fragment_shader("../../../source/shader/volume.frag");
+const std::string g_file_vertex_shader("../../source/shader/volume.vert");
+const std::string g_file_fragment_shader("../../source/shader/volume.frag");
 
 GLuint loadShaders(std::string const& vs, std::string const& fs)
 {
@@ -46,7 +46,7 @@ Turntable  g_turntable;
 
 ///SETUP VOLUME RAYCASTER HERE
 // set the volume file
-std::string g_file_string = "../../../data/head_w256_h256_d225_c1_b8.raw";
+std::string g_file_string = "../../data/head_w256_h256_d225_c1_b8.raw";
 
 // set the sampling distance for the ray traversal
 float       g_sampling_distance             = 0.001f;
@@ -133,8 +133,16 @@ int main(int argc, char* argv[])
   // the add_stop method takes:
   //  - unsigned char or float - data value     (0.0 .. 1.0) or (0..255)
   //  - vec4f         - color and alpha value   (0.0 .. 1.0) per channel
+
+  // // // // // // // // // // // // // // // // // // // // // // // // 
+  
+  // Aufgabe 2
+
+  // Schädel in Blau / Rot
   transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
-  transfer_fun.add(1.0f, glm::vec4(1.0, 1.0, 1.0, 1.0));
+  transfer_fun.add(0.1f, glm::vec4(0.0, 0.0, 0.0, 0.0));
+  transfer_fun.add(0.4f, glm::vec4(0.0, 0.0, 1.0, 0.0));
+  transfer_fun.add(1.0f, glm::vec4(1.0, 0.0, 0.0, 1.0));
    
 
   ///NOTHING TODO UNTIL HERE-------------------------------------------------------------------------------
