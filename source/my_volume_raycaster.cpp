@@ -29,7 +29,7 @@
 #include <utils.hpp>
 #include <turntable.hpp>
 
-const int choose_transfer_function = 0; // 0 (normal, schwarz, weiﬂ), 1 (sch‰del in blau rot)
+const int choose_transfer_function = 2; // 0 (normal, schwarz, weiﬂ), 1 (sch‰del in blau rot), 2 (for accumulate, compositing)
 
 const std::string g_file_vertex_shader("../../source/shader/volume.vert");
 const std::string g_file_fragment_shader("../../source/shader/volume.frag");
@@ -55,7 +55,7 @@ float       g_sampling_distance             = 0.001f;
 
 float       g_iso_value                     = 0.2f;
 
-// set the light position and color for shading
+// set the f position and color for shading
 glm::vec3   g_light_pos                     = glm::vec3(1.0,  1.0,  1.0);
 glm::vec3   g_light_color                   = glm::vec3(1.0f, 1.0f, 1.0f);
 
@@ -152,7 +152,14 @@ int main(int argc, char* argv[])
 		// Normal
 		transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
 		transfer_fun.add(1.0f, glm::vec4(1.0, 1.0, 1.0, 1.0));
+	} else if (choose_transfer_function == 2) {
+
+		// for compositing sch‰del
+		transfer_fun.add(0.0f, glm::vec4(0.0, 0.0, 0.0, 0.0));
+		transfer_fun.add(0.5f, glm::vec4(0.0, 0.0, 0.0, 0.0));
+		transfer_fun.add(1.0f, glm::vec4(1.0, 1.0, 1.0, 0.5));
 	}
+
    
 
   ///NOTHING TODO UNTIL HERE-------------------------------------------------------------------------------
