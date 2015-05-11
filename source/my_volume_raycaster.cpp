@@ -29,7 +29,7 @@
 #include <utils.hpp>
 #include <turntable.hpp>
 
-const int choose_transfer_function = 2; // 0 (normal, schwarz, weiﬂ), 1 (sch‰del in blau rot), 2 (for accumulate, compositing)
+const int choose_transfer_function = 0; // 0 (normal, schwarz, weiﬂ), 1 (sch‰del in blau rot), 2 (for accumulate, compositing)
 
 const std::string g_file_vertex_shader("../../source/shader/volume.vert");
 const std::string g_file_fragment_shader("../../source/shader/volume.frag");
@@ -56,8 +56,11 @@ float       g_sampling_distance             = 0.001f;
 float       g_iso_value                     = 0.2f;
 
 // set the f position and color for shading
-glm::vec3   g_light_pos                     = glm::vec3(1.0,  1.0,  1.0);
-glm::vec3   g_light_color                   = glm::vec3(1.0f, 1.0f, 1.0f);
+glm::vec3   g_light_pos                     = glm::vec3(-1000.0,  0.0,  -1000.0);
+glm::vec3   g_light_color                   = glm::vec3(1.0f, 0.5f, 0.5f); // diffuse and specular
+
+// THRESHOLD FOR FIRST HIT SURFACE
+float g_first_hit_threshold = 0.3;
 
 // set backgorund color here
 //glm::vec3   g_background_color = glm::vec3(1.0f, 1.0f, 1.0f); //white
@@ -331,6 +334,7 @@ int main(int argc, char* argv[])
     glUniform3fv(glGetUniformLocation(program, "camera_location"), 1,
         glm::value_ptr(camera_location));
     glUniform1f(glGetUniformLocation(program, "sampling_distance"), g_sampling_distance);
+	glUniform1f(glGetUniformLocation(program, "first_hit_threshold"), g_first_hit_threshold);
     glUniform1f(glGetUniformLocation(program, "iso_value"), g_iso_value);
     glUniform3fv(glGetUniformLocation(program, "max_bounds"), 1,
         glm::value_ptr(max_volume_bounds));
@@ -345,6 +349,7 @@ int main(int argc, char* argv[])
 
     glUniform3fv(glGetUniformLocation(program, "light_color"), 1,
         glm::value_ptr(g_light_color));
+	
 
     glUniformMatrix4fv(glGetUniformLocation(program, "Projection"), 1, GL_FALSE,
         glm::value_ptr(projection));

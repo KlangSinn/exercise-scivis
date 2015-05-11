@@ -12,6 +12,7 @@ uniform sampler2D transfer_texture;
 
 uniform vec3    camera_location;
 uniform float   sampling_distance;
+uniform float	first_hit_threshold; // edited
 uniform float   iso_value;
 uniform vec3    max_bounds;
 uniform ivec3   volume_dimensions;
@@ -57,7 +58,7 @@ float distance(vec3 pos1, vec3 pos2) {
 	return sqrt(pow(pos1.x - pos2.x, 2.0) + pow(pos1.y - pos2.y, 2.0) + pow(pos1.z - pos2.z, 2.0));
 }
 float length_sqr(vec3 whatuwant) {
-	return (pow(whatuwant.x, 2.0) + pow(whatuwant.y, 2.0) + pow(whatuwant.z, 2.0));
+	return pow(whatuwant.x, 2.0) + pow(whatuwant.y, 2.0) + pow(whatuwant.z, 2.0);
 }
 float get_liniear_interpolation(vec3 a, vec3 b, vec3 ab, float A, float B) {
 	float x = distance(a, ab) / distance(a, b);
@@ -69,7 +70,7 @@ float get_liniear_interpolation(vec3 a, vec3 b, vec3 ab, float A, float B) {
 }
 float get_triliniear_sample(vec3 in_sampling_pos) {
 
-	if (inside_volume_bounds(in_sampling_pos)) {
+	//if (inside_volume_bounds(in_sampling_pos)) {
 
 		vec3 sampling_pos_array_space_f = in_sampling_pos * vec3(volume_dimensions);
 
@@ -101,9 +102,9 @@ float get_triliniear_sample(vec3 in_sampling_pos) {
 		float final_sample = (1 - x3) * abcd_opa + x3 * efgh_opa;
 
 		return final_sample;
-	} else {
+	/*} else {
 		return -1.0;
-	}
+	}*/
 }
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
@@ -117,28 +118,27 @@ vec4 transfer(float sample) {
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
 
 // Aufgabe 4
-vec3 get_gradient(vec3 sample_position) {
-	/*return vec3(
-		(get_triliniear_sample(vec3(sample.x + 1, sample.y, sample.z)) - get_triliniear_sample(vec3(sample.x - 1, sample.y, sample.z))),
-		(get_triliniear_sample(vec3(sample.x, sample.y + 1, sample.z)) - get_triliniear_sample(vec3(sample.x, sample.y - 1, sample.z))),
-		(get_triliniear_sample(vec3(sample.x, sample.y, sample.z + 1)) - get_triliniear_sample(vec3(sample.x, sample.y, sample.z - 1)))
-		);*/
-	vec3 d;
+vec3 get_gradient(vec3 sample) {
+	return vec3(
+		(get_triliniear_sample(vec3(sample.x + sampling_distance, sample.y, sample.z)) - get_triliniear_sample(vec3(sample.x - sampling_distance, sample.y, sample.z))),
+		(get_triliniear_sample(vec3(sample.x, sample.y + sampling_distance, sample.z)) - get_triliniear_sample(vec3(sample.x, sample.y - sampling_distance, sample.z))),
+		(get_triliniear_sample(vec3(sample.x, sample.y, sample.z + sampling_distance)) - get_triliniear_sample(vec3(sample.x, sample.y, sample.z - sampling_distance)))
+		);
+	/*vec3 d;
 
-	d.x = (float(get_triliniear_sample(sample_position + vec3(1.0, 0.0, 0.0)))
-		- float(get_triliniear_sample(sample_position - vec3(1.0, 0.0, 0.0))));
-	d.y = (float(get_triliniear_sample(sample_position + vec3(0.0, 1.0, 0.0)))
-		- float(get_triliniear_sample(sample_position - vec3(0.0, 1.0, 0.0))));
-	d.z = (float(get_triliniear_sample(sample_position + vec3(0.0, 0.0, 1.0)))
-		- float(get_triliniear_sample(sample_position - vec3(0.0, 0.0, 1.0))));
+	d.x = (float(get_triliniear_sample(sample_position + vec3(0.1, 0.0, 0.0)))
+		- float(get_triliniear_sample(sample_position - vec3(0.1, 0.0, 0.0))));
+	d.y = (float(get_triliniear_sample(sample_position + vec3(0.0, 0.1, 0.0)))
+		- float(get_triliniear_sample(sample_position - vec3(0.0, 0.1, 0.0))));
+	d.z = (float(get_triliniear_sample(sample_position + vec3(0.0, 0.0, 0.1)))
+		- float(get_triliniear_sample(sample_position - vec3(0.0, 0.0, 0.1))));
 
-	return d;
+	return d;*/
 }
-
 
 // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
 
-#define AUFGABE 4  // 31 32 331 332 4 5
+#define AUFGABE 5  // 31 32 331 332 4 5
 void main() {
 
     /// One step trough the volume
@@ -232,59 +232,100 @@ void main() {
 	// GRADIENT + LIGHT PHONG
 	// COMPOSITING | FRONT - TO - BACK
 	float trans = 1.0;
+
 	while (inside_volume_bounds(sampling_pos) && trans > 0.0) {
 		float s = get_triliniear_sample(sampling_pos);
 		if (s > 0.1) {
 
-			// // light calculation
-			//vec3 gradient = get_gradient(sampling_pos);
-			//vec3 gradient = vec3(0.0);
-			//vec3 l = normalize(sampling_pos - light_position);
-			//float cos_of_vec = 0.0;
+			// light calculation
+			vec3 gradient = normalize(get_gradient(sampling_pos));
+			float cos_of_vec = 0.0;			
+			float cos_pow = 0.0;
 
 
-			//--------
-
-			//vec3 reflection = normalize(2 * dot(-l, gradient)*gradient + l);
-			//float cos_pow = 0.0;
-			//float length_of_gradient = max(gradient.x, 0.1) * 10;
-
-
-			//if (gradient.x != 0.0) {
-				/*cos_of_vec = dot(l, gradient);
+			if (length_sqr(gradient) > 0.1) {
+				vec3 l = normalize(sampling_pos - light_position);			
 				cos_of_vec = max(0.0, dot(l, gradient));
 
-				float tmp_dot = dot(reflection, normalize(ray_increment));
-				cos_pow = pow(min(0.0, tmp_dot), 80);*/
+				vec3 reflection = normalize(2 * dot(-l, gradient) * gradient + l);
+				float tmp_dot = dot(reflection, normalize(-ray_increment));
+				cos_pow = pow(tmp_dot, 100);
+			}
 
-				vec4 tmp_col = transfer(s);
-				dst += tmp_col * tmp_col.a * trans;
-				trans = trans * (1 - tmp_col.a);
-			//}
+			vec4 tmp_col = transfer(s);
+
+			// vec3 to vec4 for calculation
+			vec4 light_col = vec4(light_color.r, light_color.g, light_color.b, 1.0);	
+
+			// AMBIENT
+			dst += tmp_col * tmp_col.a * trans;
+
+			// DIFFUSE						
+			dst += tmp_col * tmp_col.a * trans * (cos_of_vec * light_col) * 2;
+
+			// SPECLUAR
+			if (cos_pow > 0.0)
+				dst += tmp_col * (cos_pow * light_col) * 0.1;
+
+			trans = trans * (1 - tmp_col.a);
+
 		}
 		sampling_pos += ray_increment;
 	}
 	dst.a = 1.0;
 #endif 
 
-#if AUFGABE == 5
+	// // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // // 
 
-    // the traversal loop,
-    // termination when the sampling position is outside volume boundarys
-    // another termination condition for early ray termination is added
-    while (inside_volume && dst.a < 0.95)
-    {
-        // get sample
-        float s = get_sample_data(sampling_pos);
+#if AUFGABE == 5 // & Aufgabe 6 & Aufgabe 7
 
-        // garbage code
-        dst = vec4(1.0, 0.0, 1.0, 1.0);
+    // FIRST HIT ISO SURFACE
+	bool hit = false;
+	while (inside_volume_bounds(sampling_pos) && !hit) {
+		float s = get_triliniear_sample(sampling_pos);
 
-        // increment the ray sampling position
+		if (s > first_hit_threshold) {				
+			vec3 minor_step = sampling_pos - ray_increment;
+
+			//Binary Search Method
+			while (length_sqr(sampling_pos - minor_step) > length_sqr(ray_increment) * 0.00001) {
+				vec3 test_sample = vec3(0.0, 0.0, 0.0);
+				test_sample.x = minor_step.x + (sampling_pos.x - minor_step.x) / 2;
+				test_sample.y = minor_step.y + (sampling_pos.y - minor_step.y) / 2;
+				test_sample.z = minor_step.z + (sampling_pos.z - minor_step.z) / 2;
+				if (get_triliniear_sample(test_sample) > first_hit_threshold){
+					sampling_pos = test_sample;
+				} else {
+					minor_step = test_sample;
+				}
+			}
+			//vec3 src = vec3f(0.0f, 0.0f, 0.0f);
+
+			// light calculation
+			vec3 gradient = normalize(get_gradient(sampling_pos));
+			float cos_of_vec = 0.0;
+			float cos_pow = 0.0;
+
+
+			if (length_sqr(gradient) > 0.1) {
+				vec3 l = normalize(sampling_pos - light_position);
+				cos_of_vec = max(0.0, dot(l, gradient));
+
+				vec3 reflection = normalize(2 * dot(-l, gradient) * gradient + l);
+				float tmp_dot = dot(reflection, normalize(ray_increment * (-1)));
+				cos_pow = pow(tmp_dot, 100);
+			}
+
+			vec4 col = transfer(s);
+			col += (0.4 * cos_of_vec);
+			if (cos_pow > 0.0)
+				col += (1.4 * cos_pow);
+			dst = col;
+			hit = true;
+		}
+			
+
         sampling_pos += ray_increment;
-
-        // update the loop termination condition
-        inside_volume = inside_volume_bounds(sampling_pos);
     }
     
 #endif 
